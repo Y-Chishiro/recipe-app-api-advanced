@@ -1,6 +1,7 @@
 """
 Tests for models
 """
+from unittest.mock import patch
 from decimal import Decimal # Recipeオブジェクトのフィールドの1つに使用
 
 from django.test import TestCase
@@ -92,3 +93,20 @@ class ModelTests(TestCase):
         )
 
         self.assertEqual(str(ingredient), ingredient.name)
+
+    # 124 Modify recipe model
+    @patch('core.models.uuid.uuid4') # 指定したパスの関数（uuid.uuid4）を一時的にモック板に入れ替える
+    def test_recipe_file_name_uuid(self, mock_uuid):
+        """Test generating image path."""
+        # このテストの意味：
+        # テストしたい関数はmodels.pyに定義したrecipe_file_name_uuid関数が期待通りの動きをするかどうか。
+        # この関数はユーザがアップロードした画像ファイルの名前を渡すと、拡張子はそのままで、名前部分をuuid.uuid4関数が返す
+        # ユニークな文字列に変更して返す。これによっておそらくファイル名が揃って良いのか？
+        # テストする時はuuidが毎回違う結果を返すと困るので、recipe_file_name_uuid内でuuid.uuid4関数が呼ばれた時の
+        # 結果をモックから返す（固定値にする）ために、@patchを使っている。
+
+        uuid = 'test-uuid'
+        mock_uuid.return_value = uuid # これがmockオブジェクト。return_value属性をつけると自動的に@Patchで指定した関数のmockオブジェクトになるらしい。むずすぎる。
+        file_path = models.recipe_image_file_path(None, 'example.jpg')
+
+        self.assertEqual(file_path, f'uploads/recipe/{uuid}.jpg')

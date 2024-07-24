@@ -121,4 +121,18 @@ class RecipeDetailSerializer(RecipeSerializer): # RecipeSerializerを継承す�
     """Serializer for recipe detail view."""
 
     class Meta(RecipeSerializer.Meta):
-        fields = RecipeSerializer.Meta.fields + ['description'] # 詳細ビューではdescriptionを追加する！！！
+        fields = RecipeSerializer.Meta.fields + ['description', 'image'] # 詳細ビューではdescriptionを追加する！！！ imageは#127で追加。
+
+
+# 126 Implement image API
+# 大前提として、レシピの登録APIと、画像のアップロードAPIはわける。これはRESTのプラクティス（？）で
+# 1つのAPIの中にJSONや画像など、複数のデータ型を混在させるのは避けた方が良い、というのがある。
+# そのほうがデータ構造を簡単に保てるし、開発しやすいし、可読性も高い。
+class RecipeImageSerializer(serializers.ModelSerializer):
+    """Serializer for uploading images to recipes."""
+
+    class Meta:
+        model = Recipe
+        fields = ['id', 'image']
+        read_only_fields = ['id']
+        extra_kwargs = {'image': {'required': 'True'}}

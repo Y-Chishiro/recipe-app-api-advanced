@@ -4,7 +4,10 @@ Views for the recipe APIs
 from rest_framework import (
     viewsets,
     mixins, # 92
+    status, # 126
 )
+from rest_framework.decorators import action # 126
+from rest_framework.response import Response # 126
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
 
@@ -37,6 +40,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
         """Return teh sereializer class for request."""
         if self.action == 'list': # これはurlを見て、recipes/などでアクセスすると、勝手にaction属性にlistをつけてくれるらしい。。
             return serializers.RecipeSerializer
+        elif self.action == 'upload_image': # 126 Implement image API
+            return serializers.RecipeImageSerializer # 下にあるupload_image関数から呼び出すために。
 
         return self.serializer_class
 
@@ -45,35 +50,77 @@ class RecipeViewSet(viewsets.ModelViewSet):
         """Create a new recipe."""
         serializer.save(user=self.request.user) # ユーザはこちらで追加することにより、ユーザ側でのPOST時にユーザIDを含める必要がなくなる。
 
-# 92 Implement tag listing API
-class TagViewSet(mixins.DestroyModelMixin, # 96はこの1行だけ追加
-                 mixins.UpdateModelMixin, # 94はこの1行だけ追加
-                 mixins.ListModelMixin,
-                 viewsets.GenericViewSet):
+    # 126 Implement image API
+    @action(methods=['POST'], detail=True, url_path='upload-image') # POST, detail（リストではなく）URLへのアクセス、url_pathがupload-imageの時に呼び出すよ、という意味のデコレータ。
+    def upload_image(self, request, pk=None):
+        """Upload an image to recipe."""
+        recipe = self.get_object()
+        serializer = self.get_serializer(recipe, data=request.data)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# 117 Refactor recipe views
+class BaseRecipeAttrViewSet(mixins.DestroyModelMixin,
+                            mixins.UpdateModelMixin,
+                            mixins.ListModelMixin,
+                            viewsets.GenericViewSet):
+    """Base viewset for recipe attributes."""
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        """Filter queryset to authenticated user."""
+        return self.queryset.filter(user=self.request.user).order_by('-name')
+
+
+# AFTER REFACTORING: 92 Implement tag listing API
+class TagViewSet(BaseRecipeAttrViewSet):
     """Manage tags in the database."""
     serializer_class = serializers.TagSerializer
     queryset = Tag.objects.all()
-    authentication_classes = [TokenAuthentication]
-    permission_classes = [IsAuthenticated]
 
-    def get_queryset(self):
-        """Filter queryset to authenticated user."""
-        return self.queryset.filter(user=self.request.user).order_by('-name')
-
-
-# 107 Implement ingredient listing API
-class IngredientViewSet(mixins.DestroyModelMixin, # 111 Implement delete ingredient API
-                        mixins.UpdateModelMixin, # 109 Implement update ingredient API
-                        mixins.ListModelMixin, # 107
-                        viewsets.GenericViewSet): # 107
+# AFTER REFACTORING: 107 Implement ingredient listing API
+class IngredientViewSet(BaseRecipeAttrViewSet):
     """Manage ingredients in the database."""
     serializer_class = serializers.IngredientSerializer
     queryset = Ingredient.objects.all()
-    authentication_classes = [TokenAuthentication]
-    permission_classes = [IsAuthenticated]
 
-    def get_queryset(self):
-        """Filter queryset to authenticated user."""
-        return self.queryset.filter(user=self.request.user).order_by('-name')
+
+# # 92 Implement tag listing API
+# class TagViewSet(mixins.DestroyModelMixin, # 96はこの1行だけ追加
+#                  mixins.UpdateModelMixin, # 94はこの1行だけ追加
+#                  mixins.ListModelMixin,
+#                  viewsets.GenericViewSet):
+#     """Manage tags in the database."""
+#     serializer_class = serializers.TagSerializer
+#     queryset = Tag.objects.all()
+#     authentication_classes = [TokenAuthentication]
+#     permission_classes = [IsAuthenticated]
+
+#     def get_queryset(self):
+#         """Filter queryset to authenticated user."""
+#         return self.queryset.filter(user=self.request.user).order_by('-name')
+
+
+# # 107 Implement ingredient listing API
+# class IngredientViewSet(mixins.DestroyModelMixin, # 111 Implement delete ingredient API
+#                         mixins.UpdateModelMixin, # 109 Implement update ingredient API
+#                         mixins.ListModelMixin, # 107
+#                         viewsets.GenericViewSet): # 107
+#     """Manage ingredients in the database."""
+#     serializer_class = serializers.IngredientSerializer
+#     queryset = Ingredient.objects.all()
+#     authentication_classes = [TokenAuthentication]
+#     permission_classes = [IsAuthenticated]
+
+#     def get_queryset(self):
+#         """Filter queryset to authenticated user."""
+#         return self.queryset.filter(user=self.request.user).order_by('-name')
+
 
 

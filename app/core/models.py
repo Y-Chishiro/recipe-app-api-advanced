@@ -1,6 +1,9 @@
 """
 Database models.
 """
+import uuid # 124
+import os # 124
+
 from django.conf import settings
 
 from django.db import models
@@ -9,6 +12,17 @@ from django.contrib.auth.models import (
     BaseUserManager,
     PermissionsMixin,
 )
+
+
+# 124 Modify recipe model
+# アップロードされた画像を拡張子だけ残して、ファイル名をuuid4で出力された16ビットのランダムな文字列にする。
+def recipe_image_file_path(instance, filename):
+    """Generate file path for new recipe image."""
+    ext = os.path.splitext(filename)[1] # 拡張子を取り出して
+    filename = f'{uuid.uuid4()}{ext}' # uuid.uuid4でランダムに生成されたユニークな識別子（文字列）を取り出してファイル名にする。例：f1e6b391-3b9c-4a4c-8b9f-8c8f5db692d5
+
+    return os.path.join('uploads', 'recipe', filename)
+
 
 class UserManager(BaseUserManager):
     """Manager for users."""
@@ -57,6 +71,8 @@ class Recipe(models.Model):
     time_minutes = models.IntegerField()
     price = models.DecimalField(max_digits=5, decimal_places=2)
     link = models.CharField(max_length=255, blank=True)
+
+    image = models.ImageField(null=True, upload_to=recipe_image_file_path) # 124 Modify recipe model
 
     # 90 Add tag model
     tags = models.ManyToManyField('Tag')
