@@ -23,8 +23,11 @@ from django.urls import path, include
 from django.conf.urls.static import static # 123
 from django.conf import settings # 123
 
+from core import views as core_views # 152 Updating serviceでサクッと作成
+
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('api/health-check/', core_views.health_check, name='health-check'), # 152 Updating serviceでサクッと作成
     path('api/schema/', SpectacularAPIView.as_view(), name='api-schema'),
     path(
         'api/docs/',
